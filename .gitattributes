@@ -1,0 +1,15 @@
+* text=auto eol=lf
+
+# If you have scripts that must run on Windows cmd/powershell, you can optionally:
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary (never touched)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.tif binary
+*.tiff binary
+*.pdf binary
+*.h5 binary
+*.mat binary
