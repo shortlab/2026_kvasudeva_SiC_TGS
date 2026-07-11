@@ -1,0 +1,7 @@
+# ANSYS generated working directories and solver outputs
+ANSYS_thermal_model/thermal_model_final.tmp/
+ANSYS_thermal_model/thermal_model_final_files/
+ANSYS_thermal_model/thermal_model_final_v2_files/
+
+*.rth
+*.lock

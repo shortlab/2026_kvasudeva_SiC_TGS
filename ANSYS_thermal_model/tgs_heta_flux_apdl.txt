@@ -1,0 +1,119 @@
+! ============================================================
+! TGS Gaussian + cosine grating heat flux
+! Half-domain transient thermal model
+! Surface heat flux applied to TOP_SURFACE
+! ============================================================
+
+/SOLU
+
+! -----------------------------
+! Analysis controls
+! -----------------------------
+ANTYPE,TRANS
+TRNOPT,FULL
+KBC,1
+AUTOTS,OFF
+
+! Initial temperature
+TUNIF,500
+
+! Time stepping
+dt    = 50e-12
+tend  = 15e-9
+nstep = tend/dt
+
+DELTIM,dt,dt,dt
+OUTRES,ALL,ALL
+
+! -----------------------------
+! TGS heat source parameters
+! -----------------------------
+pi      = ACOS(-1)
+
+! Report-like absorbed peak heat flux
+qpeak   = 1.5e11        ! W/m^2
+
+! Pump beam radius
+w0      = 70e-6         ! m
+
+! TGS grating spacing
+Lambda  = 6.4e-6        ! m, change if your experiment uses another value
+
+! Temporal pulse
+t0      = 400e-12       ! s, peak pulse time
+tau     = 250e-12       ! s, report says 2*tau = 500 ps pulse length
+
+! Coordinate shift for half model
+! Use xcenter = 0 if your symmetry/beam-center plane is at global X = 0.
+! If your beam center is elsewhere, set xcenter to that coordinate.
+xcenter = 250e-6
+
+! -----------------------------
+! Store top-surface nodes
+! -----------------------------
+ALLSEL,ALL
+CMSEL,S,TOP_SURFACE
+
+*GET,ntop,NODE,0,COUNT
+
+*IF,ntop,LE,0,THEN
+  /COM, ERROR: No nodes found in TOP_SURFACE named selection.
+  /COM, Check that the named selection is sent to solver and named TOP_SURFACE.
+  ALLSEL,ALL
+  FINISH
+*ENDIF
+
+*DIM,topnodes,ARRAY,ntop
+*VGET,topnodes(1),NODE,,NLIST
+
+ALLSEL,ALL
+
+! -----------------------------
+! Transient solve loop
+! -----------------------------
+*DO,istep,1,nstep
+
+  tcurr = istep*dt
+
+  ! Time-dependent Gaussian pulse
+  timefac = EXP(-2*((tcurr-t0)*(tcurr-t0))/(tau*tau))
+
+  ! Clear previous top-surface heat flux
+  CMSEL,S,TOP_SURFACE
+  SFDELE,ALL,HFLUX
+  ALLSEL,ALL
+
+  ! Apply updated heat flux to every node on top surface
+  *DO,i,1,ntop
+
+    nd = topnodes(i)
+
+    *GET,xpos,NODE,nd,LOC,X
+
+    ! Physical coordinate relative to beam center / symmetry plane
+    xphys = xpos - xcenter
+
+    ! Gaussian envelope
+    gfac = EXP(-2*(xphys*xphys)/(w0*w0))
+
+    ! TGS interference grating
+    grfac = 0.5*(1 + COS(2*pi*xphys/Lambda))
+
+    ! Full heat flux
+    qval = qpeak*gfac*grfac*timefac
+
+    ! Apply heat flux
+    SF,nd,HFLUX,qval
+
+  *ENDDO
+
+  ALLSEL,ALL
+
+  TIME,tcurr
+  NSUBST,1,1,1
+  SOLVE
+
+*ENDDO
+
+ALLSEL,ALL
+FINISH
